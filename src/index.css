@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --color-moss-50: #f4f6f0;
+  --color-moss-100: #e6ead9;
+  --color-moss-200: #ced6b3;
+  --color-moss-300: #abb884;
+  --color-moss-400: #8a9a5b;
+  --color-moss-500: #6b7d3f;
+  --color-moss-600: #546231;
+  --color-moss-700: #424d26;
+  --color-moss-800: #363e20;
+  --color-moss-900: #2e351b;
+  --color-moss-950: #181c0e;
+}
+
+@utility bg-camouflage {
+  background-color: var(--color-moss-900);
+  background-image: 
+    radial-gradient(circle at 20% 30%, var(--color-moss-800) 0%, var(--color-moss-800) 15%, transparent 25%),
+    radial-gradient(circle at 70% 60%, var(--color-moss-700) 0%, var(--color-moss-700) 20%, transparent 35%),
+    radial-gradient(circle at 40% 80%, var(--color-moss-800) 0%, var(--color-moss-800) 18%, transparent 30%),
+    radial-gradient(circle at 85% 15%, var(--color-moss-950) 0%, var(--color-moss-950) 12%, transparent 22%),
+    radial-gradient(circle at 10% 90%, var(--color-moss-600) 0%, var(--color-moss-600) 10%, transparent 20%);
+  background-size: 800px 800px;
+}
