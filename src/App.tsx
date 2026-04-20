@@ -45,9 +45,39 @@ type TabType = 'positivo' | 'negativo' | 'todos';
 // --- Main Component ---
 
 export default function App() {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [history, setHistory] = useState<LogEntry[]>([]);
-  const [logoUrl, setLogoUrl] = useState<string>('');
+  const [students, setStudents] = useState<Student[]>(() => {
+    const saved = localStorage.getItem('fo_students');
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      return parsed.map((s: any) => {
+        if ('score' in s) {
+          return {
+            id: s.id,
+            name: s.name,
+            posScore: s.score > 0 ? s.score : 0,
+            negScore: s.score < 0 ? Math.abs(s.score) : 0,
+            addedAt: s.addedAt || Date.now()
+          };
+        }
+        return s;
+      });
+    } catch {
+      return [];
+    }
+  });
+
+  const [history, setHistory] = useState<LogEntry[]>(() => {
+    const saved = localStorage.getItem('fo_history');
+    if (!saved) return [];
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return [];
+    }
+  });
+
+  const [logoUrl, setLogoUrl] = useState<string>(() => localStorage.getItem('fo_logo') || '');
   const [activeTab, setActiveTab] = useState<TabType>('todos');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,38 +90,18 @@ export default function App() {
 
   // --- Effects ---
 
-  // Load initial data
-  useEffect(() => {
-    const savedStudents = localStorage.getItem('fo_students');
-    const savedHistory = localStorage.getItem('fo_history');
-    const savedLogo = localStorage.getItem('fo_logo');
-    if (savedLogo) setLogoUrl(savedLogo);
-    if (savedStudents) {
-      const parsed = JSON.parse(savedStudents);
-      // Migration: convert old 'score' to posScore/negScore if needed
-      const migrated = parsed.map((s: any) => {
-        if ('score' in s) {
-          return {
-            id: s.id,
-            name: s.name,
-            posScore: s.score > 0 ? s.score : 0,
-            negScore: s.score < 0 ? Math.abs(s.score) : 0,
-            addedAt: s.addedAt
-          };
-        }
-        return s;
-      });
-      setStudents(migrated);
-    }
-    if (savedHistory) setHistory(JSON.parse(savedHistory));
-  }, []);
-
-  // Save data
+  // Save data whenever it changes
   useEffect(() => {
     localStorage.setItem('fo_students', JSON.stringify(students));
+  }, [students]);
+
+  useEffect(() => {
     localStorage.setItem('fo_history', JSON.stringify(history));
+  }, [history]);
+
+  useEffect(() => {
     localStorage.setItem('fo_logo', logoUrl);
-  }, [students, history, logoUrl]);
+  }, [logoUrl]);
 
   // --- Actions ---
 
