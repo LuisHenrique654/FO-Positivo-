@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, ChangeEvent } from 'react';
 import { 
   Plus, 
   Minus, 
@@ -24,6 +24,13 @@ interface Student {
   addedAt: number;
 }
 
+interface Toast {
+  id: string;
+  message: string;
+  type: 'positive' | 'negative' | 'info';
+  timestamp: number;
+}
+
 interface LogEntry {
   id: string;
   studentId: string;
@@ -42,7 +49,10 @@ export default function App() {
   const [history, setHistory] = useState<LogEntry[]>([]);
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabType>('todos');
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
   const [newStudentName, setNewStudentName] = useState('');
   const [isHistoryVisible, setIsHistoryVisible] = useState(false);
   const [sortBy, setSortBy] = useState<'score' | 'name'>('score');
@@ -96,6 +106,34 @@ export default function App() {
     };
     setStudents([...students, newStudent]);
     setNewStudentName('');
+    showToast(`Aluno ${newStudent.name} cadastrado no sistema.`, 'info');
+  };
+
+  const showToast = (message: string, type: 'positive' | 'negative' | 'info' = 'info') => {
+    const id = crypto.randomUUID();
+    setToasts(prev => [...prev, { id, message, type, timestamp: Date.now() }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+
+  const startEditing = (student: Student) => {
+    setEditingStudentId(student.id);
+    setEditingName(student.name);
+  };
+
+  const cancelEditing = () => {
+    setEditingStudentId(null);
+    setEditingName('');
+  };
+
+  const saveName = (id: string) => {
+    if (!editingName.trim()) return;
+    setStudents(prev => prev.map(s => 
+      s.id === id ? { ...s, name: editingName.trim() } : s
+    ));
+    showToast(`Identificação atualizada para ${editingName.trim()}`, 'info');
+    cancelEditing();
   };
 
   const updateScore = (id: string, type: 'positive' | 'negative', amount: number = 1) => {
@@ -110,6 +148,11 @@ export default function App() {
       }
       return s;
     }));
+
+    showToast(
+      `Registro de ${type === 'positive' ? 'MÉRITO' : 'FO'} para: ${student.name}`,
+      type
+    );
 
     const newLog: LogEntry = {
       id: crypto.randomUUID(),
@@ -129,7 +172,7 @@ export default function App() {
     }
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -185,30 +228,56 @@ export default function App() {
   return (
     <div className="min-h-screen bg-moss-950 text-moss-50 font-sans bg-camouflage bg-fixed">
       {/* Header */}
-      <header className="bg-moss-900/80 backdrop-blur-md border-b border-moss-800 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-moss-800 rounded-lg border border-moss-700 flex items-center justify-center overflow-hidden shrink-0">
-               {logoUrl ? (
-                 <img 
-                  src={logoUrl} 
-                  alt="Logo" 
-                  className="w-full h-full object-cover"
-                />
-               ) : (
-                 <TrendingUp className="text-moss-50 w-5 h-5" />
-               )}
-            </div>
-            <h1 className="text-xl font-black tracking-tighter hidden sm:block uppercase italic text-orange-500">Cascavel fire</h1>
+      <header className="bg-moss-900/80 backdrop-blur-md border-b border-moss-800 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
+          {/* Toasts / Notifications Overlay */}
+          <div className="fixed top-16 right-4 left-4 sm:left-auto z-50 flex flex-col gap-2 pointer-events-none">
+            <AnimatePresence>
+              {toasts.map((toast) => (
+                <motion.div
+                  key={toast.id}
+                  initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                  className={`
+                    px-4 py-3 rounded-lg shadow-2xl border-l-4 font-black text-[10px] uppercase tracking-widest flex items-center gap-3 backdrop-blur-xl sm:min-w-[280px]
+                    ${toast.type === 'positive' ? 'bg-emerald-950/90 border-emerald-500 text-emerald-400' : 
+                      toast.type === 'negative' ? 'bg-rose-950/90 border-rose-500 text-rose-400' : 
+                      'bg-moss-900/90 border-moss-500 text-moss-300'}
+                  `}
+                >
+                  <div className={`p-1 rounded bg-black/20 text-white shrink-0`}>
+                    {toast.type === 'positive' ? <CheckCircle2 className="w-4 h-4" /> : 
+                     toast.type === 'negative' ? <AlertCircle className="w-4 h-4" /> : 
+                     <TrendingUp className="w-4 h-4" />}
+                  </div>
+                  {toast.message}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
 
-          <div className="flex-1 max-w-md mx-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-moss-800 rounded-lg border border-moss-700 flex items-center justify-center overflow-hidden shrink-0">
+               <img 
+                src={logoUrl || "/logo.png"} 
+                alt="Logo" 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  if (!logoUrl) (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/cascavel/200/200';
+                }}
+              />
+            </div>
+            <h1 className="text-lg sm:text-xl font-black tracking-tighter hidden xs:block uppercase italic text-orange-500">Cascavel fire</h1>
+          </div>
+
+          <div className="flex-1 max-w-[150px] sm:max-w-md mx-2 sm:mx-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-moss-400 w-4 h-4" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-moss-400 w-3.5 h-3.5" />
               <input 
                 type="text" 
-                placeholder="Localizar aluno..."
-                className="w-full pl-10 pr-4 py-2 bg-moss-800/50 border border-moss-700 rounded-lg text-sm focus:ring-2 focus:ring-moss-500 transition-all outline-none text-moss-50 placeholder:text-moss-500"
+                placeholder="Aluno..."
+                className="w-full pl-8 sm:pl-10 pr-4 py-1.5 sm:py-2 bg-moss-800/50 border border-moss-700 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-moss-500 transition-all outline-none text-moss-50 placeholder:text-moss-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -236,18 +305,14 @@ export default function App() {
             {/* Branding Card */}
             <div className="bg-moss-900/50 p-6 rounded-2xl border border-moss-800 shadow-xl flex flex-col items-center justify-center gap-4 text-center group/logo relative overflow-hidden">
               <div className="w-24 h-24 bg-moss-800 rounded-3xl border-2 border-moss-700 p-1 shadow-inner flex items-center justify-center overflow-hidden group-hover:border-moss-500 transition-colors">
-                {logoUrl ? (
-                  <img 
-                    src={logoUrl} 
-                    alt="Cascavel Fire Logo" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-1 text-moss-700">
-                    <UserPlus className="w-8 h-8 opacity-20" />
-                    <span className="text-[8px] font-black uppercase">Sem Logo</span>
-                  </div>
-                )}
+                <img 
+                  src={logoUrl || "/logo.png"} 
+                  alt="Cascavel Fire Logo" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    if (!logoUrl) (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/cascavel/400/400';
+                  }}
+                />
               </div>
               
               <label className="absolute inset-0 bg-moss-950/80 opacity-0 group-hover/logo:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer p-4 backdrop-blur-sm">
@@ -313,34 +378,34 @@ export default function App() {
           </div>
 
           {/* Main Content Areas */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3 space-y-4 sm:space-y-6">
             {/* Tabs */}
-            <div className="flex bg-moss-900 border border-moss-800 p-1 rounded-xl w-full sm:w-fit">
+            <div className="flex bg-moss-900 border border-moss-800 p-1 rounded-xl w-full overflow-x-auto scrollbar-hide">
               {(['todos', 'positivo', 'negativo'] as TabType[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`
-                    px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all duration-300
+                    flex-1 px-3 sm:px-6 py-2 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap
                     ${activeTab === tab 
                       ? 'bg-moss-700 text-moss-50 shadow-[0_0_15px_rgba(171,184,132,0.2)]' 
                       : 'text-moss-500 hover:text-moss-300'}
                   `}
                 >
-                  {tab === 'todos' ? 'Curso de Especialização' : `FO ${tab}`}
+                  {tab === 'todos' ? 'Geral' : `FO ${tab}`}
                 </button>
               ))}
             </div>
 
             {/* Controls */}
-            <div className="flex items-center justify-between border-b border-moss-800 pb-4">
-              <h2 className="text-sm font-black text-moss-200 uppercase tracking-[0.3em] flex items-center gap-2 italic">
-                Lista de Alunos
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-moss-800 pb-4 gap-4">
+              <h2 className="text-xs sm:text-sm font-black text-moss-200 uppercase tracking-[0.3em] flex items-center gap-2 italic">
+                Relação Nominal
                 <span className="text-[10px] bg-moss-800 text-moss-400 px-2 py-0.5 rounded border border-moss-700 font-mono">
                   {filteredStudents.length}
                 </span>
               </h2>
-              <div className="flex items-center gap-4 text-[10px] text-moss-500 font-black uppercase tracking-wider">
+              <div className="flex items-center gap-4 text-[9px] sm:text-[10px] text-moss-500 font-black uppercase tracking-wider w-full sm:w-auto justify-between sm:justify-end">
                 <button 
                   onClick={() => {
                     if (sortBy === 'score') setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -383,27 +448,56 @@ export default function App() {
                       `}
                     >
                       {/* Interaction Overlay */}
-                      <button 
-                        onClick={() => deleteStudent(student.id)}
-                        className="absolute right-2 top-2 p-2 text-moss-700 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
-                        title="Remover"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                      <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all z-20">
+                        <button 
+                          onClick={() => startEditing(student)}
+                          className="p-2 text-moss-700 hover:text-moss-300"
+                          title="Editar Nome"
+                        >
+                          <TrendingUp className="w-3 h-3 rotate-12" />
+                        </button>
+                        <button 
+                          onClick={() => deleteStudent(student.id)}
+                          className="p-2 text-moss-700 hover:text-rose-500"
+                          title="Remover"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
 
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center justify-between gap-2 sm:gap-4">
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-black text-moss-50 truncate uppercase tracking-tighter text-lg italic">{student.name}</h3>
-                          <div className="flex flex-wrap items-center gap-3 mt-1">
+                          {editingStudentId === student.id ? (
+                            <div className="flex flex-col gap-2">
+                              <input 
+                                autoFocus
+                                type="text"
+                                className="w-full bg-moss-950 border border-moss-600 rounded px-2 py-1.5 text-xs font-black text-moss-50 uppercase focus:ring-1 focus:ring-moss-400 outline-none"
+                                value={editingName}
+                                onChange={(e) => setEditingName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveName(student.id);
+                                  if (e.key === 'Escape') cancelEditing();
+                                }}
+                              />
+                              <div className="flex gap-4">
+                                <button onClick={() => saveName(student.id)} className="text-[10px] p-1 font-black uppercase text-emerald-500 hover:text-emerald-400 bg-emerald-950/30 rounded border border-emerald-900 w-full">Salvar</button>
+                                <button onClick={cancelEditing} className="text-[10px] p-1 font-black uppercase text-moss-500 hover:text-moss-400 bg-moss-800/30 rounded border border-moss-700 w-full">Sair</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <h3 className="font-black text-moss-50 truncate uppercase tracking-tighter text-base sm:text-lg italic group-hover:text-orange-500 transition-colors leading-tight">{student.name}</h3>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2">
                              <div className="flex items-center gap-1.5">
-                               <span className={`text-2xl font-black font-mono ${student.posScore > 0 ? 'text-emerald-400' : 'text-moss-600'}`}>
+                               <span className={`text-xl sm:text-2xl font-black font-mono ${student.posScore > 0 ? 'text-emerald-400' : 'text-moss-600'}`}>
                                   +{student.posScore}
                                </span>
                                {student.posScore > 0 && <CheckCircle2 className="w-4 h-4 text-emerald-500/50" />}
                              </div>
-                             <div className="w-px h-4 bg-moss-800"></div>
+                             <div className="w-px h-3 bg-moss-800"></div>
                              <div className="flex items-center gap-1.5">
-                               <span className={`text-2xl font-black font-mono ${student.negScore > 0 ? 'text-rose-400' : 'text-moss-600'}`}>
+                               <span className={`text-xl sm:text-2xl font-black font-mono ${student.negScore > 0 ? 'text-rose-400' : 'text-moss-600'}`}>
                                   -{student.negScore}
                                </span>
                                {student.negScore > 0 && <AlertCircle className="w-4 h-4 text-rose-500/50" />}
@@ -411,16 +505,16 @@ export default function App() {
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-1.5 shrink-0">
                           <button 
                              onClick={() => updateScore(student.id, 'positive', 1)}
-                            className="w-12 h-10 flex items-center justify-center rounded-lg bg-moss-700 text-moss-50 border border-moss-600 shadow-[0_4px_0_var(--color-moss-800)] active:translate-y-[2px] active:shadow-[0_2px_0_var(--color-moss-800)] hover:bg-moss-600 transition-all"
+                            className="w-12 h-11 sm:h-10 flex items-center justify-center rounded-lg bg-moss-700 text-moss-50 border border-moss-600 shadow-[0_4px_0_var(--color-moss-800)] active:translate-y-[2px] active:shadow-[0_2px_0_var(--color-moss-800)] hover:bg-moss-600 transition-all"
                           >
                             <Plus className="w-6 h-6" />
                           </button>
                           <button 
                             onClick={() => updateScore(student.id, 'negative', 1)}
-                            className="w-12 h-10 flex items-center justify-center rounded-lg bg-moss-900 text-rose-500 border border-rose-900 shadow-[0_4px_0_#1a1c0d] active:translate-y-[2px] active:shadow-[0_2px_0_#1a1c0d] hover:bg-moss-800 transition-all"
+                            className="w-12 h-11 sm:h-10 flex items-center justify-center rounded-lg bg-moss-900 text-rose-500 border border-rose-900 shadow-[0_4px_0_#1a1c0d] active:translate-y-[2px] active:shadow-[0_2px_0_#1a1c0d] hover:bg-moss-800 transition-all"
                           >
                             <Minus className="w-6 h-6 border-transparent" />
                           </button>
