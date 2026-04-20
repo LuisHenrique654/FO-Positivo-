@@ -315,14 +315,14 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
           
           {/* Sidebar / Stats */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Branding Card */}
-            <div className="bg-moss-900/50 p-6 rounded-2xl border border-moss-800 shadow-xl flex flex-col items-center justify-center gap-4 text-center group/logo relative overflow-hidden">
-              <div className="w-24 h-24 bg-moss-800 rounded-3xl border-2 border-moss-700 p-1 shadow-inner flex items-center justify-center overflow-hidden group-hover:border-moss-500 transition-colors">
+          <div className="lg:col-span-1 space-y-4 sm:space-y-6">
+            {/* Branding Card - Compact on Mobile */}
+            <div className="bg-moss-900/50 p-4 sm:p-6 rounded-2xl border border-moss-800 shadow-xl flex sm:flex-col items-center justify-center gap-3 sm:gap-4 text-center group/logo relative overflow-hidden">
+              <div className="w-16 h-16 sm:w-24 sm:h-24 bg-moss-800 rounded-2xl sm:rounded-3xl border-2 border-moss-700 p-1 shadow-inner flex items-center justify-center overflow-hidden group-hover:border-moss-500 transition-colors shrink-0">
                 <img 
                   src={logoUrl || "/logo.png"} 
                   alt="Cascavel Fire Logo" 
@@ -344,52 +344,54 @@ export default function App() {
                 />
               </label>
 
-              <div>
-                <h2 className="text-xl font-black uppercase text-orange-500 italic tracking-tighter">Cascavel Fire</h2>
-                <p className="text-[10px] text-moss-500 font-bold uppercase tracking-widest mt-1">Tactical Training Unit</p>
+              <div className="text-left sm:text-center">
+                <h2 className="text-lg sm:text-xl font-black uppercase text-orange-500 italic tracking-tighter">Cascavel Fire</h2>
+                <p className="text-[9px] sm:text-[10px] text-moss-500 font-bold uppercase tracking-widest mt-1">Tactical Training Unit</p>
               </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="bg-moss-900 p-6 rounded-2xl border border-moss-800 shadow-xl space-y-4">
-              <h2 className="text-xs font-bold text-moss-500 uppercase tracking-[0.2em]">Status do Curso</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-emerald-950/50 p-3 rounded-xl border border-emerald-900/50 transition-all hover:shadow-md">
-                  <div className="text-emerald-400 font-bold text-2xl">{stats.positive}</div>
-                  <div className="text-emerald-500 text-[10px] font-black uppercase mt-1 tracking-wider">FO Positivo</div>
+            {/* Quick Stats - Grid on mobile */}
+            <div className="bg-moss-900 p-4 sm:p-6 rounded-2xl border border-moss-800 shadow-xl space-y-3 sm:space-y-4">
+              <h2 className="text-[10px] sm:text-xs font-bold text-moss-500 uppercase tracking-[0.2em] hidden sm:block">Status do Curso</h2>
+              <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4">
+                <div className="bg-emerald-950/50 p-2 sm:p-3 rounded-xl border border-emerald-900/50 transition-all hover:shadow-md flex sm:flex-col items-center sm:items-start justify-between sm:justify-center">
+                  <div className="text-emerald-400 font-bold text-xl sm:text-2xl">{stats.positive}</div>
+                  <div className="text-emerald-500 text-[9px] sm:text-[10px] font-black uppercase tracking-wider">MÉRITOS</div>
                 </div>
-                <div className="bg-rose-950/50 p-3 rounded-xl border border-rose-900/50 transition-all hover:shadow-md">
-                  <div className="text-rose-400 font-bold text-2xl">{stats.negative}</div>
-                  <div className="text-rose-500 text-[10px] font-black uppercase mt-1 tracking-wider">FO Negativo</div>
+                <div className="bg-rose-950/50 p-2 sm:p-3 rounded-xl border border-rose-900/50 transition-all hover:shadow-md flex sm:flex-col items-center sm:items-start justify-between sm:justify-center">
+                  <div className="text-rose-400 font-bold text-xl sm:text-2xl">{stats.negative}</div>
+                  <div className="text-rose-500 text-[9px] sm:text-[10px] font-black uppercase tracking-wider">FO</div>
                 </div>
               </div>
-              <div className="text-[10px] text-moss-500 text-center font-mono uppercase tracking-widest">
+              <div className="text-[9px] sm:text-[10px] text-moss-500 text-center font-mono uppercase tracking-widest pt-2 border-t border-moss-800/50">
                 Total: {stats.total} | Neutros: {stats.neutral}
               </div>
             </div>
 
-            {/* Add Student Form */}
-            <div className="bg-camouflage p-6 rounded-3xl shadow-2xl border border-moss-700 text-white relative overflow-hidden group">
+            {/* Add Student Form - Collapsible or very compact on mobile */}
+            <div className="bg-camouflage p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xl border border-moss-700 text-white relative overflow-hidden group">
               <div className="absolute inset-0 bg-moss-950/20 group-hover:bg-moss-950/10 transition-colors pointer-events-none"></div>
               <div className="relative z-10">
-                <h3 className="font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2 italic">
-                  <UserPlus className="w-5 h-5 text-moss-300" /> Adicionar Novo Aluno
+                <h3 className="font-black text-[10px] sm:text-sm uppercase tracking-widest mb-3 sm:mb-4 flex items-center gap-2 italic">
+                  <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-moss-300" /> Cadastrar Aluno
                 </h3>
-                <div className="space-y-3">
-                  <input 
-                    type="text" 
-                    placeholder="NOME DO ALUNO..."
-                    className="w-full px-4 py-2.5 rounded-lg bg-moss-950/60 border border-moss-600 placeholder-moss-600 focus:outline-none focus:ring-2 focus:ring-moss-400 transition-all text-moss-50 font-bold uppercase text-sm"
-                    value={newStudentName}
-                    onChange={(e) => setNewStudentName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addStudent()}
-                  />
-                  <button 
-                    onClick={addStudent}
-                    className="w-full bg-moss-300 text-moss-950 font-black py-2.5 rounded-lg hover:bg-moss-200 transition-all shadow-lg active:scale-95 duration-200 flex items-center justify-center gap-2 uppercase text-xs tracking-tighter"
-                  >
-                    <Plus className="w-5 h-5" /> Confirmar Cadastro
-                  </button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="NOME..."
+                      className="flex-1 px-3 py-2 rounded-lg bg-moss-950/60 border border-moss-600 placeholder-moss-600 focus:outline-none focus:ring-2 focus:ring-moss-400 transition-all text-moss-50 font-bold uppercase text-xs sm:text-sm"
+                      value={newStudentName}
+                      onChange={(e) => setNewStudentName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addStudent()}
+                    />
+                    <button 
+                      onClick={addStudent}
+                      className="bg-moss-300 text-moss-950 font-black px-4 py-2 rounded-lg hover:bg-moss-200 transition-all shadow-lg active:scale-95 duration-200 flex items-center justify-center gap-2 uppercase text-[10px] tracking-tighter"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -444,20 +446,22 @@ export default function App() {
                 </button>
                 <div className="w-px h-3 bg-moss-800 hidden sm:block"></div>
                 {showClearConfirm ? (
-                  <div className="flex items-center gap-2 bg-rose-950/50 px-2 py-1 rounded border border-rose-900 animate-pulse">
-                    <span className="text-[8px] font-black uppercase text-rose-200">Apagar tudo?</span>
-                    <button 
-                      onClick={clearAllStudents}
-                      className="text-emerald-500 hover:text-emerald-400 font-black uppercase tracking-tighter"
-                    >
-                      SIM
-                    </button>
-                    <button 
-                      onClick={() => setShowClearConfirm(false)}
-                      className="text-moss-400 hover:text-moss-200 font-black uppercase tracking-tighter"
-                    >
-                      NÃO
-                    </button>
+                  <div className="flex items-center gap-2 bg-rose-950/30 px-2 py-1.5 rounded border border-rose-900/50">
+                    <span className="text-[9px] font-bold uppercase text-rose-200 whitespace-nowrap">Apagar tudo?</span>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={clearAllStudents}
+                        className="text-emerald-500 hover:text-emerald-400 font-black uppercase text-[10px]"
+                      >
+                        SIM
+                      </button>
+                      <button 
+                        onClick={() => setShowClearConfirm(false)}
+                        className="text-moss-400 hover:text-moss-200 font-black uppercase text-[10px]"
+                      >
+                        NÃO
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <button 
@@ -465,7 +469,7 @@ export default function App() {
                     className="flex items-center gap-1 text-rose-800 hover:text-rose-600 transition-colors"
                     title="Limpar todos os alunos"
                   >
-                    <Trash2 className="w-3 h-3" /> Zerar Lista
+                    <Trash2 className="w-3 h-3" /> Zerar
                   </button>
                 )}
               </div>
