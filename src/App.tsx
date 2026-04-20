@@ -419,60 +419,94 @@ export default function App() {
             </div>
 
             {/* Controls */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-moss-800 pb-4 gap-4">
-              <h2 className="text-xs sm:text-sm font-black text-moss-200 uppercase tracking-[0.3em] flex items-center gap-2 italic">
-                Relação Nominal
-                <span className="text-[10px] bg-moss-800 text-moss-400 px-2 py-0.5 rounded border border-moss-700 font-mono">
-                  {filteredStudents.length}
-                </span>
-              </h2>
-              <div className="flex items-center gap-4 text-[9px] sm:text-[10px] text-moss-500 font-black uppercase tracking-wider w-full sm:w-auto justify-between sm:justify-end">
-                <button 
-                  onClick={() => {
-                    if (sortBy === 'score') setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-                    else { setSortBy('score'); setSortOrder('desc'); }
-                  }}
-                  className={`flex items-center gap-1 transition-colors ${sortBy === 'score' ? 'text-moss-300' : ''}`}
-                >
-                  <ArrowUpDown className="w-3 h-3" /> Mérito
-                </button>
-                <button 
-                  onClick={() => {
-                    if (sortBy === 'name') setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-                    else { setSortBy('name'); setSortOrder('asc'); }
-                  }}
-                  className={`flex items-center gap-1 transition-colors ${sortBy === 'name' ? 'text-moss-300' : ''}`}
-                >
-                  <ArrowUpDown className="w-3 h-3" /> Alfabeto
-                </button>
-                <div className="w-px h-3 bg-moss-800 hidden sm:block"></div>
-                {showClearConfirm ? (
-                  <div className="flex items-center gap-2 bg-rose-950/30 px-2 py-1.5 rounded border border-rose-900/50">
-                    <span className="text-[9px] font-bold uppercase text-rose-200 whitespace-nowrap">Apagar tudo?</span>
-                    <div className="flex gap-2">
+            <div className="border-b border-moss-800 pb-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs sm:text-sm font-black text-moss-500 uppercase tracking-[0.3em] flex items-center gap-2 italic">
+                  Relação Nominal
+                  <span className="text-[10px] bg-moss-900 text-moss-300 px-2 py-0.5 rounded border border-moss-800 font-mono">
+                    {filteredStudents.length}
+                  </span>
+                </h2>
+
+                {/* Mobile Reset Action */}
+                <div className="sm:hidden">
+                  {showClearConfirm ? (
+                    <div className="flex items-center gap-2 bg-rose-950/40 px-2 py-1 rounded border border-rose-900/50 animate-in fade-in slide-in-from-right-2 duration-200">
                       <button 
                         onClick={clearAllStudents}
-                        className="text-emerald-500 hover:text-emerald-400 font-black uppercase text-[10px]"
+                        className="text-rose-500 font-black uppercase text-[10px]"
                       >
-                        SIM
+                        ZERAR LISTA? SIM
                       </button>
                       <button 
                         onClick={() => setShowClearConfirm(false)}
-                        className="text-moss-400 hover:text-moss-200 font-black uppercase text-[10px]"
+                        className="text-moss-500 font-black uppercase text-[10px] ml-2"
                       >
-                        NÃO
+                        X
                       </button>
                     </div>
-                  </div>
-                ) : (
+                  ) : (
+                    <button 
+                      onClick={() => setShowClearConfirm(true)}
+                      className="flex items-center gap-1.5 text-rose-800 font-black uppercase text-[10px] tracking-tighter"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Zerar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between bg-moss-950/30 p-2 rounded-lg border border-moss-800/50">
+                <div className="flex items-center gap-4 text-[9px] sm:text-[10px] text-moss-500 font-black uppercase tracking-wider">
                   <button 
-                    onClick={() => setShowClearConfirm(true)}
-                    className="flex items-center gap-1 text-rose-800 hover:text-rose-600 transition-colors"
-                    title="Limpar todos os alunos"
+                    onClick={() => {
+                      if (sortBy === 'score') setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                      else { setSortBy('score'); setSortOrder('desc'); }
+                    }}
+                    className={`flex items-center gap-1 transition-colors ${sortBy === 'score' ? 'text-moss-300' : ''}`}
                   >
-                    <Trash2 className="w-3 h-3" /> Zerar
+                    <ArrowUpDown className="w-3 h-3" /> Mérito
                   </button>
-                )}
+                  <button 
+                    onClick={() => {
+                      if (sortBy === 'name') setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                      else { setSortBy('name'); setSortOrder('asc'); }
+                    }}
+                    className={`flex items-center gap-1 transition-colors ${sortBy === 'name' ? 'text-moss-300' : ''}`}
+                  >
+                    <ArrowUpDown className="w-3 h-3" /> Alfabeto
+                  </button>
+                </div>
+
+                {/* Desktop Reset Action */}
+                <div className="hidden sm:block">
+                  {showClearConfirm ? (
+                    <div className="flex items-center gap-2 bg-rose-950/30 px-2 py-1.5 rounded border border-rose-900/50">
+                      <span className="text-[9px] font-bold uppercase text-rose-200 whitespace-nowrap">Apagar tudo?</span>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={clearAllStudents}
+                          className="text-emerald-500 hover:text-emerald-400 font-black uppercase text-[10px]"
+                        >
+                          SIM
+                        </button>
+                        <button 
+                          onClick={() => setShowClearConfirm(false)}
+                          className="text-moss-400 hover:text-moss-200 font-black uppercase text-[10px]"
+                        >
+                          NÃO
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setShowClearConfirm(true)}
+                      className="flex items-center gap-1 text-rose-800 hover:text-rose-600 transition-colors font-black uppercase text-[10px]"
+                    >
+                      <Trash2 className="w-3 h-3" /> Zerar Tudo
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
