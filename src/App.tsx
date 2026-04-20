@@ -87,6 +87,7 @@ export default function App() {
   const [isHistoryVisible, setIsHistoryVisible] = useState(false);
   const [sortBy, setSortBy] = useState<'score' | 'name'>('score');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // --- Effects ---
 
@@ -180,6 +181,13 @@ export default function App() {
       setStudents(prev => prev.filter(s => s.id !== id));
       setHistory(prev => prev.filter(h => h.studentId !== id));
     }
+  };
+
+  const clearAllStudents = () => {
+    setStudents([]);
+    setHistory([]);
+    setShowClearConfirm(false);
+    showToast('Todos os alunos foram removidos do sistema.', 'negative');
   };
 
   const handleLogoUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -434,6 +442,32 @@ export default function App() {
                 >
                   <ArrowUpDown className="w-3 h-3" /> Alfabeto
                 </button>
+                <div className="w-px h-3 bg-moss-800 hidden sm:block"></div>
+                {showClearConfirm ? (
+                  <div className="flex items-center gap-2 bg-rose-950/50 px-2 py-1 rounded border border-rose-900 animate-pulse">
+                    <span className="text-[8px] font-black uppercase text-rose-200">Apagar tudo?</span>
+                    <button 
+                      onClick={clearAllStudents}
+                      className="text-emerald-500 hover:text-emerald-400 font-black uppercase tracking-tighter"
+                    >
+                      SIM
+                    </button>
+                    <button 
+                      onClick={() => setShowClearConfirm(false)}
+                      className="text-moss-400 hover:text-moss-200 font-black uppercase tracking-tighter"
+                    >
+                      NÃO
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => setShowClearConfirm(true)}
+                    className="flex items-center gap-1 text-rose-800 hover:text-rose-600 transition-colors"
+                    title="Limpar todos os alunos"
+                  >
+                    <Trash2 className="w-3 h-3" /> Zerar Lista
+                  </button>
+                )}
               </div>
             </div>
 
