@@ -88,6 +88,7 @@ export default function App() {
   const [sortBy, setSortBy] = useState<'score' | 'name'>('score');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
 
   // --- Effects ---
 
@@ -177,10 +178,10 @@ export default function App() {
   };
 
   const deleteStudent = (id: string) => {
-    if (confirm('Tem certeza que deseja remover este aluno?')) {
-      setStudents(prev => prev.filter(s => s.id !== id));
-      setHistory(prev => prev.filter(h => h.studentId !== id));
-    }
+    setStudents(prev => prev.filter(s => s.id !== id));
+    setHistory(prev => prev.filter(h => h.studentId !== id));
+    setStudentToDelete(null);
+    showToast('Aluno removido do sistema.', 'info');
   };
 
   const clearAllStudents = () => {
@@ -496,21 +497,41 @@ export default function App() {
                       `}
                     >
                       {/* Interaction Overlay */}
-                      <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all z-20">
-                        <button 
-                          onClick={() => startEditing(student)}
-                          className="p-2 text-moss-700 hover:text-moss-300"
-                          title="Editar Nome"
-                        >
-                          <TrendingUp className="w-3 h-3 rotate-12" />
-                        </button>
-                        <button 
-                          onClick={() => deleteStudent(student.id)}
-                          className="p-2 text-moss-700 hover:text-rose-500"
-                          title="Remover"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                      <div className="absolute right-2 top-2 flex items-center gap-1 transition-all z-20">
+                        {studentToDelete === student.id ? (
+                          <div className="flex items-center gap-2 bg-rose-950/80 px-2 py-1 rounded border border-rose-900 backdrop-blur-sm animate-in fade-in zoom-in duration-200">
+                            <span className="text-[8px] font-black uppercase text-rose-200">Excluir?</span>
+                            <button 
+                              onClick={() => deleteStudent(student.id)}
+                              className="text-emerald-500 hover:text-emerald-400 font-black uppercase text-[10px]"
+                            >
+                              Sim
+                            </button>
+                            <button 
+                              onClick={() => setStudentToDelete(null)}
+                              className="text-moss-400 hover:text-moss-200 font-black uppercase text-[10px]"
+                            >
+                              Não
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button 
+                              onClick={() => startEditing(student)}
+                              className="p-2 text-moss-500 sm:text-moss-700 hover:text-moss-300 transition-colors"
+                              title="Editar Nome"
+                            >
+                              <TrendingUp className="w-3.5 h-3.5 sm:w-3 sm:h-3 rotate-12" />
+                            </button>
+                            <button 
+                              onClick={() => setStudentToDelete(student.id)}
+                              className="p-2 text-moss-500 sm:text-moss-700 hover:text-rose-500 transition-colors"
+                              title="Remover"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+                            </button>
+                          </>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between gap-2 sm:gap-4">
