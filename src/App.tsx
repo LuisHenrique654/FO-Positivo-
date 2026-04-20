@@ -505,19 +505,42 @@ export default function App() {
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-1.5 shrink-0">
-                          <button 
-                             onClick={() => updateScore(student.id, 'positive', 1)}
-                            className="w-12 h-11 sm:h-10 flex items-center justify-center rounded-lg bg-moss-700 text-moss-50 border border-moss-600 shadow-[0_4px_0_var(--color-moss-800)] active:translate-y-[2px] active:shadow-[0_2px_0_var(--color-moss-800)] hover:bg-moss-600 transition-all"
-                          >
-                            <Plus className="w-6 h-6" />
-                          </button>
-                          <button 
-                            onClick={() => updateScore(student.id, 'negative', 1)}
-                            className="w-12 h-11 sm:h-10 flex items-center justify-center rounded-lg bg-moss-900 text-rose-500 border border-rose-900 shadow-[0_4px_0_#1a1c0d] active:translate-y-[2px] active:shadow-[0_2px_0_#1a1c0d] hover:bg-moss-800 transition-all"
-                          >
-                            <Minus className="w-6 h-6 border-transparent" />
-                          </button>
+                        <div className="flex flex-col gap-2 shrink-0">
+                          {/* Positive Controls */}
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => updateScore(student.id, 'positive', -1)}
+                              className="w-8 h-10 flex items-center justify-center rounded-lg bg-moss-900 text-emerald-700 border border-emerald-950/50 hover:bg-moss-800 transition-all active:scale-95"
+                              title="Remover Positivo"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => updateScore(student.id, 'positive', 1)}
+                              className="w-12 h-10 flex items-center justify-center rounded-lg bg-emerald-700 text-moss-50 border border-emerald-600 shadow-[0_4px_0_var(--color-moss-800)] active:translate-y-[2px] active:shadow-[0_2px_0_var(--color-moss-800)] hover:bg-emerald-600 transition-all font-black"
+                              title="Adicionar Positivo"
+                            >
+                              <Plus className="w-6 h-6" />
+                            </button>
+                          </div>
+
+                          {/* Negative Controls */}
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => updateScore(student.id, 'negative', -1)}
+                              className="w-8 h-10 flex items-center justify-center rounded-lg bg-moss-900 text-rose-700 border border-rose-950/50 hover:bg-moss-800 transition-all active:scale-95"
+                              title="Remover Negativo"
+                            >
+                              <Plus className="w-4 h-4 rotate-45" />
+                            </button>
+                            <button 
+                              onClick={() => updateScore(student.id, 'negative', 1)}
+                              className="w-12 h-10 flex items-center justify-center rounded-lg bg-rose-900 text-white border border-rose-800 shadow-[0_4px_0_#1a1c0d] active:translate-y-[2px] active:shadow-[0_2px_0_#1a1c0d] hover:bg-rose-800 transition-all font-black"
+                              title="Adicionar Negativo"
+                            >
+                              <Minus className="w-6 h-6 border-transparent" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </motion.div>
