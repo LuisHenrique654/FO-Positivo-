@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "A tactical training student with merit and FO scores",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "posScore": { "type": "number" },
+        "negScore": { "type": "number" },
+        "addedAt": { "type": "number" }
+      },
+      "required": ["id", "name", "posScore", "negScore", "addedAt"]
+    },
+    "LogEntry": {
+      "title": "LogEntry",
+      "description": "A history record of a score change",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "type": { "type": "string", "enum": ["positive", "negative"] },
+        "delta": { "type": "number" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "studentId", "studentName", "type", "delta", "timestamp"]
+    },
+    "AppConfig": {
+      "title": "AppConfig",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "logoUrl": { "type": "string", "description": "Base64 or URL of the permanent logo" }
+      }
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "List of active students"
+    },
+    "/history/{logId}": {
+      "schema": "LogEntry",
+      "description": "History of merit and FO applications"
+    },
+    "/config/global": {
+      "schema": "AppConfig",
+      "description": "Global app settings like the shared logo"
+    }
+  }
+}

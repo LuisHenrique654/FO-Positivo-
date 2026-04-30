@@ -10,9 +10,26 @@ import {
   Trash2, 
   ArrowUpDown,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  LogIn,
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  query, 
+  orderBy, 
+  setDoc,
+  writeBatch,
+  getDoc
+} from 'firebase/firestore';
+import { onAuthStateChanged, signInAnonymously, signOut } from 'firebase/auth';
+import { db, auth, handleFirestoreError, OperationType, signInWithGoogle } from './lib/firebase';
 
 // --- Types ---
 
@@ -45,39 +62,11 @@ type TabType = 'positivo' | 'negativo' | 'todos';
 // --- Main Component ---
 
 export default function App() {
-  const [students, setStudents] = useState<Student[]>(() => {
-    const saved = localStorage.getItem('fo_students');
-    if (!saved) return [];
-    try {
-      const parsed = JSON.parse(saved);
-      return parsed.map((s: any) => {
-        if ('score' in s) {
-          return {
-            id: s.id,
-            name: s.name,
-            posScore: s.score > 0 ? s.score : 0,
-            negScore: s.score < 0 ? Math.abs(s.score) : 0,
-            addedAt: s.addedAt || Date.now()
-          };
-        }
-        return s;
-      });
-    } catch {
-      return [];
-    }
-  });
-
-  const [history, setHistory] = useState<LogEntry[]>(() => {
-    const saved = localStorage.getItem('fo_history');
-    if (!saved) return [];
-    try {
-      return JSON.parse(saved);
-    } catch {
-      return [];
-    }
-  });
-
-  const [logoUrl, setLogoUrl] = useState<string>(() => localStorage.getItem('fo_logo') || '');
+  const [students, setStudents] = useState<Student[]>([]);
+  const [history, setHistory] = useState<LogEntry[]>([]);
+  const [logoUrl, setLogoUrl] = useState<string>('');
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('todos');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,33 +81,78 @@ export default function App() {
 
   // --- Effects ---
 
-  // Save data whenever it changes
+  // Auth & Sync
   useEffect(() => {
-    localStorage.setItem('fo_students', JSON.stringify(students));
-  }, [students]);
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (!u) {
+        signInAnonymously(auth).catch(err => {
+          console.error("Auth error:", err);
+          if (err.code === 'auth/admin-restricted-operation') {
+            console.warn("Anonymous Authentication is disabled in Firebase Console. Please enable it or use Google Sign-In.");
+          }
+          setIsLoading(false);
+        });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('fo_history', JSON.stringify(history));
-  }, [history]);
+    if (!user) return;
 
-  useEffect(() => {
-    localStorage.setItem('fo_logo', logoUrl);
-  }, [logoUrl]);
+    // Sync Students
+    const qStudents = query(collection(db, 'students'), orderBy('addedAt', 'desc'));
+    const unsubscribeStudents = onSnapshot(qStudents, (snapshot) => {
+      const list: Student[] = [];
+      snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() } as Student));
+      setStudents(list);
+      setIsLoading(false);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'students'));
+
+    // Sync History
+    const qHistory = query(collection(db, 'history'), orderBy('timestamp', 'desc'));
+    const unsubscribeHistory = onSnapshot(qHistory, (snapshot) => {
+      const list: LogEntry[] = [];
+      snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() } as LogEntry));
+      setHistory(list);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'history'));
+
+    // Sync Global Config (Logo)
+    const unsubscribeConfig = onSnapshot(doc(db, 'config', 'global'), (snapshot) => {
+      if (snapshot.exists()) {
+        setLogoUrl(snapshot.data().logoUrl || '');
+      }
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'config/global'));
+
+    return () => {
+      unsubscribeStudents();
+      unsubscribeHistory();
+      unsubscribeConfig();
+    };
+  }, [user]);
 
   // --- Actions ---
 
-  const addStudent = () => {
-    if (!newStudentName.trim()) return;
-    const newStudent: Student = {
-      id: crypto.randomUUID(),
+  const addStudent = async () => {
+    if (!newStudentName.trim() || !user) return;
+    const studentData = {
       name: newStudentName.trim(),
       posScore: 0,
       negScore: 0,
       addedAt: Date.now(),
     };
-    setStudents([...students, newStudent]);
-    setNewStudentName('');
-    showToast(`Aluno ${newStudent.name} cadastrado no sistema.`, 'info');
+    
+    try {
+      await addDoc(collection(db, 'students'), studentData);
+      setNewStudentName('');
+      showToast(`Aluno ${studentData.name} cadastrado no sistema.`, 'info');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'students');
+    }
   };
 
   const showToast = (message: string, type: 'positive' | 'negative' | 'info' = 'info') => {
@@ -139,64 +173,94 @@ export default function App() {
     setEditingName('');
   };
 
-  const saveName = (id: string) => {
+  const saveName = async (id: string) => {
     if (!editingName.trim()) return;
-    setStudents(prev => prev.map(s => 
-      s.id === id ? { ...s, name: editingName.trim() } : s
-    ));
-    showToast(`Identificação atualizada para ${editingName.trim()}`, 'info');
-    cancelEditing();
+    try {
+      await updateDoc(doc(db, 'students', id), { name: editingName.trim() });
+      showToast(`Identificação atualizada para ${editingName.trim()}`, 'info');
+      cancelEditing();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `students/${id}`);
+    }
   };
 
-  const updateScore = (id: string, type: 'positive' | 'negative', amount: number = 1) => {
+  const updateScore = async (id: string, type: 'positive' | 'negative', amount: number = 1) => {
     const student = students.find(s => s.id === id);
     if (!student) return;
 
-    setStudents(prev => prev.map(s => {
-      if (s.id === id) {
-        return type === 'positive' 
-          ? { ...s, posScore: Math.max(0, s.posScore + amount) }
-          : { ...s, negScore: Math.max(0, s.negScore + amount) };
-      }
-      return s;
-    }));
+    try {
+      const studentDoc = doc(db, 'students', id);
+      const newPos = type === 'positive' ? Math.max(0, student.posScore + amount) : student.posScore;
+      const newNeg = type === 'negative' ? Math.max(0, student.negScore + amount) : student.negScore;
 
-    showToast(
-      `Registro de ${type === 'positive' ? 'MÉRITO' : 'FO'} para: ${student.name}`,
-      type
-    );
+      await updateDoc(studentDoc, {
+        posScore: newPos,
+        negScore: newNeg
+      });
 
-    const newLog: LogEntry = {
-      id: crypto.randomUUID(),
-      studentId: id,
-      studentName: student.name,
-      amount,
-      type,
-      timestamp: Date.now(),
-    };
-    setHistory([newLog, ...history]);
+      showToast(
+        `Registro de ${type === 'positive' ? 'MÉRITO' : 'FO'} para: ${student.name}`,
+        type
+      );
+
+      await addDoc(collection(db, 'history'), {
+        studentId: id,
+        studentName: student.name,
+        amount,
+        type,
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `students/${id}`);
+    }
   };
 
-  const deleteStudent = (id: string) => {
-    setStudents(prev => prev.filter(s => s.id !== id));
-    setHistory(prev => prev.filter(h => h.studentId !== id));
-    setStudentToDelete(null);
-    showToast('Aluno removido do sistema.', 'info');
+  const deleteStudent = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'students', id));
+      setStudentToDelete(null);
+      showToast('Aluno removido do sistema.', 'info');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `students/${id}`);
+    }
   };
 
-  const clearAllStudents = () => {
-    setStudents([]);
-    setHistory([]);
-    setShowClearConfirm(false);
-    showToast('Todos os alunos foram removidos do sistema.', 'negative');
+  const clearAllStudents = async () => {
+    try {
+      const batch = writeBatch(db);
+      
+      // Delete all students
+      students.forEach(s => {
+        batch.delete(doc(db, 'students', s.id));
+      });
+
+      // Delete all history
+      history.forEach(h => {
+        batch.delete(doc(db, 'history', h.id));
+      });
+
+      await batch.commit();
+      setShowClearConfirm(false);
+      showToast('Todos os alunos foram removidos do sistema.', 'negative');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'bulk-delete');
+    }
   };
 
-  const handleLogoUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleLogout = () => signOut(auth).catch(err => handleFirestoreError(err, OperationType.WRITE, 'auth/logout'));
+  
+  const handleLogoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoUrl(reader.result as string);
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        try {
+          await setDoc(doc(db, 'config', 'global'), { logoUrl: base64 }, { merge: true });
+          showToast('Logo atualizada para todos os usuários.', 'info');
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, 'config/global');
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -246,6 +310,31 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-moss-950 text-moss-50 font-sans bg-camouflage bg-fixed">
+      {/* Loading Overlay */}
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div 
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-moss-950 flex flex-col items-center justify-center gap-4"
+          >
+            <div className="w-16 h-16 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
+            <div className="text-orange-500 font-black uppercase tracking-widest text-xs animate-pulse">
+              Autenticando Unidade Ativa...
+            </div>
+            {!user && !isLoading && (
+              <motion.button
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={signInWithGoogle}
+                className="mt-4 px-6 py-3 bg-orange-500 text-white rounded-lg font-black uppercase tracking-widest text-xs flex items-center gap-2 hover:bg-orange-600 transition-colors shadow-lg active:scale-95"
+              >
+                <LogIn className="w-4 h-4" /> Entrar com Google
+              </motion.button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Header */}
       <header className="bg-moss-900/80 backdrop-blur-md border-b border-moss-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
@@ -303,16 +392,36 @@ export default function App() {
             </div>
           </div>
 
-          <button 
-            onClick={() => setIsHistoryVisible(!isHistoryVisible)}
-            className="p-2 hover:bg-moss-800 rounded-full transition-colors relative"
-            title="Log de Operações"
-          >
-            <History className="w-5 h-5 text-moss-300" />
-            {history.length > 0 && (
-              <span className="absolute top-0 right-0 w-2 h-2 bg-moss-500 rounded-full border-2 border-moss-900"></span>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsHistoryVisible(!isHistoryVisible)}
+              className="p-2 hover:bg-moss-800 rounded-full transition-colors relative"
+              title="Log de Operações"
+            >
+              <History className="w-5 h-5 text-moss-300" />
+              {history.length > 0 && (
+                <span className="absolute top-0 right-0 w-2 h-2 bg-moss-500 rounded-full border-2 border-moss-900"></span>
+              )}
+            </button>
+            
+            {user ? (
+              <button 
+                onClick={handleLogout}
+                className="p-2 hover:bg-moss-800 rounded-full transition-colors text-moss-500 hover:text-rose-500"
+                title="Sair"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            ) : (
+              <button 
+                onClick={signInWithGoogle}
+                className="p-2 hover:bg-moss-800 rounded-full transition-colors text-orange-500"
+                title="Entrar"
+              >
+                <LogIn className="w-5 h-5" />
+              </button>
             )}
-          </button>
+          </div>
         </div>
       </header>
 
@@ -431,26 +540,26 @@ export default function App() {
                 {/* Mobile Reset Action */}
                 <div className="sm:hidden">
                   {showClearConfirm ? (
-                    <div className="flex items-center gap-2 bg-rose-950/40 px-2 py-1 rounded border border-rose-900/50 animate-in fade-in slide-in-from-right-2 duration-200">
+                    <div className="flex items-center gap-2 bg-rose-950/60 px-3 py-2 rounded-lg border border-rose-500/50 animate-in fade-in slide-in-from-right-2 duration-200">
                       <button 
                         onClick={clearAllStudents}
-                        className="text-rose-500 font-black uppercase text-[10px]"
+                        className="text-rose-400 font-black uppercase text-[11px] flex items-center gap-1"
                       >
-                        ZERAR LISTA? SIM
+                        <Trash2 className="w-3 h-3" /> CONFIRMAR ZERAR?
                       </button>
                       <button 
                         onClick={() => setShowClearConfirm(false)}
-                        className="text-moss-500 font-black uppercase text-[10px] ml-2"
+                        className="text-moss-400 font-black uppercase text-[11px] ml-2 border-l border-moss-700 pl-2"
                       >
-                        X
+                        CANCELAR
                       </button>
                     </div>
                   ) : (
                     <button 
                       onClick={() => setShowClearConfirm(true)}
-                      className="flex items-center gap-1.5 text-rose-800 font-black uppercase text-[10px] tracking-tighter"
+                      className="flex items-center gap-1.5 bg-rose-950/30 px-3 py-1.5 rounded-lg border border-rose-900/40 text-rose-500 font-bold uppercase text-[10px] tracking-tight active:scale-95 transition-all shadow-lg"
                     >
-                      <Trash2 className="w-3.5 h-3.5" /> Zerar
+                      <Trash2 className="w-3.5 h-3.5" /> Limpar Lista
                     </button>
                   )}
                 </div>

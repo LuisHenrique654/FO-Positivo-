@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- Global Safety Net ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Student Validation ---
+    function isValidStudent(data) {
+      return data.keys().hasAll(['id', 'name', 'posScore', 'negScore', 'addedAt'])
+        && data.keys().size() == 5
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.posScore is number && data.posScore >= 0
+        && data.negScore is number && data.negScore >= 0
+        && data.addedAt is number;
+    }
+
+    match /students/{studentId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(studentId) && isValidStudent(incoming());
+      allow update: if isSignedIn() 
+        && isValidStudent(incoming())
+        && incoming().id == existing().id // Immutable ID
+        && (
+          // Action: Score Update or Name Edit
+          incoming().diff(existing()).affectedKeys().hasAny(['posScore', 'negScore', 'name'])
+        );
+      allow delete: if isSignedIn();
+    }
+
+    // --- History Validation ---
+    function isValidLogEntry(data) {
+      return data.keys().hasAll(['id', 'studentId', 'studentName', 'type', 'delta', 'timestamp'])
+        && data.keys().size() == 6
+        && data.id is string && data.id.size() <= 128
+        && data.studentId is string && data.studentId.size() <= 128
+        && data.studentName is string && data.studentName.size() <= 100
+        && data.type in ['positive', 'negative']
+        && data.delta is number
+        && data.timestamp is number;
+    }
+
+    match /history/{logId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(logId) && isValidLogEntry(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    // --- Config Validation ---
+    function isValidConfig(data) {
+      return data.keys().hasAll(['logoUrl'])
+        && data.keys().size() == 1
+        && data.logoUrl is string && data.logoUrl.size() <= 2000000; // Allow 2MB for base64 logo
+    }
+
+    match /config/global {
+      allow get: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidConfig(incoming());
+    }
+  }
+}
