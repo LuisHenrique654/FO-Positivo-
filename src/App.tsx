@@ -52,7 +52,7 @@ interface LogEntry {
   id: string;
   studentId: string;
   studentName: string;
-  amount: number;
+  delta: number;
   type: 'positive' | 'negative';
   timestamp: number;
 }
@@ -91,6 +91,7 @@ export default function App() {
           if (err.code === 'auth/admin-restricted-operation') {
             console.warn("Anonymous Authentication is disabled in Firebase Console. Please enable it or use Google Sign-In.");
           }
+        }).finally(() => {
           setIsLoading(false);
         });
       } else {
@@ -138,8 +139,11 @@ export default function App() {
   // --- Actions ---
 
   const addStudent = async () => {
-    if (!newStudentName.trim() || !user) {
-      if (!user) showToast('É necessário estar autenticado para cadastrar.', 'negative');
+    if (!newStudentName.trim()) return;
+    
+    if (!user) {
+      showToast('⚠️ É necessário entrar com Google para cadastrar.', 'negative');
+      signInWithGoogle().catch(err => console.error("Login needed:", err));
       return;
     }
     
@@ -156,10 +160,10 @@ export default function App() {
     try {
       await setDoc(studentRef, studentData);
       setNewStudentName('');
-      showToast(`Aluno ${studentData.name} cadastrado no sistema.`, 'info');
+      showToast(`✅ Aluno ${studentData.name} cadastrado com sucesso.`, 'info');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'students');
-      showToast('Falha ao cadastrar: Verifique suas permissões.', 'negative');
+      showToast('❌ Erro ao cadastrar. Verifique sua conexão.', 'negative');
     }
   };
 
@@ -193,6 +197,12 @@ export default function App() {
   };
 
   const updateScore = async (id: string, type: 'positive' | 'negative', amount: number = 1) => {
+    if (!user) {
+      showToast('⚠️ Entre com Google para registrar pontuação.', 'negative');
+      signInWithGoogle().catch(err => console.error("Login Error:", err));
+      return;
+    }
+
     const student = students.find(s => s.id === id);
     if (!student) return;
 
@@ -217,23 +227,28 @@ export default function App() {
         id: logRef.id,
         studentId: id,
         studentName: student.name,
-        delta: amount,
+        delta: amount, // 'amount' comes from function arg, 'delta' is the field
         type,
         timestamp: Date.now(),
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `students/${id}`);
-      showToast('Falha na operação: Permissão negada.', 'negative');
+      showToast('❌ Erro de permissão. Verifique seu acesso.', 'negative');
     }
   };
 
   const deleteStudent = async (id: string) => {
+    if (!user) {
+      showToast('⚠️ Apenas usuários autenticados podem excluir.', 'negative');
+      return;
+    }
     try {
       await deleteDoc(doc(db, 'students', id));
       setStudentToDelete(null);
-      showToast('Aluno removido do sistema.', 'info');
+      showToast('🗑️ Aluno removido do sistema.', 'info');
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `students/${id}`);
+      showToast('❌ Erro ao excluir: Permissão negada.', 'negative');
     }
   };
 
@@ -324,25 +339,40 @@ export default function App() {
     <div className="min-h-screen bg-moss-950 text-moss-50 font-sans bg-camouflage bg-fixed">
       {/* Loading Overlay */}
       <AnimatePresence>
-        {isLoading && (
+        {(isLoading || !user) && (
           <motion.div 
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-moss-950 flex flex-col items-center justify-center gap-4"
+            className="fixed inset-0 z-[100] bg-moss-950 flex flex-col items-center justify-center gap-4 p-6 text-center"
           >
-            <div className="w-16 h-16 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
-            <div className="text-orange-500 font-black uppercase tracking-widest text-xs animate-pulse">
-              Autenticando Unidade Ativa...
-            </div>
-            {!user && !isLoading && (
-              <motion.button
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                onClick={signInWithGoogle}
-                className="mt-4 px-6 py-3 bg-orange-500 text-white rounded-lg font-black uppercase tracking-widest text-xs flex items-center gap-2 hover:bg-orange-600 transition-colors shadow-lg active:scale-95"
+            {isLoading ? (
+              <>
+                <div className="w-16 h-16 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
+                <div className="text-orange-500 font-black uppercase tracking-widest text-xs animate-pulse">
+                  Conectando ao Cascavel Fire...
+                </div>
+              </>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-moss-900 p-8 rounded-3xl border border-moss-800 shadow-2xl max-w-sm w-full"
               >
-                <LogIn className="w-4 h-4" /> Entrar com Google
-              </motion.button>
+                <div className="w-20 h-20 bg-moss-800 rounded-2xl mx-auto mb-6 flex items-center justify-center border-2 border-moss-700">
+                  <img src="/logo.png" alt="Logo" className="w-14 h-14 object-contain" />
+                </div>
+                <h2 className="text-xl font-black uppercase text-orange-500 italic mb-2">Acesso Restrito</h2>
+                <p className="text-moss-400 text-xs font-bold uppercase tracking-widest mb-8 leading-relaxed">
+                  A autenticação é necessária para gerenciar a unidade tática.
+                </p>
+                <button
+                  onClick={signInWithGoogle}
+                  className="w-full px-6 py-4 bg-orange-500 text-white rounded-xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-3 hover:bg-orange-600 transition-all shadow-lg active:scale-95 group"
+                >
+                  <LogIn className="w-5 h-5 group-hover:translate-x-1 transition-transform" /> 
+                  Entrar com Google
+                </button>
+              </motion.div>
             )}
           </motion.div>
         )}
@@ -448,7 +478,7 @@ export default function App() {
                 <img 
                   src={logoUrl || "/logo.png"} 
                   alt="Cascavel Fire Logo" 
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                   onError={(e) => {
                     if (!logoUrl) (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/cascavel/400/400';
                   }}
@@ -819,7 +849,7 @@ export default function App() {
                         flex-shrink-0 w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs font-black
                         ${log.type === 'positive' ? 'border-emerald-900 bg-emerald-950 text-emerald-400' : 'border-rose-900 bg-rose-950 text-rose-400'}
                       `}>
-                        {log.amount > 0 ? `+${log.amount}` : log.amount}
+                        {log.delta > 0 ? `+${log.delta}` : log.delta}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-black text-moss-100 uppercase tracking-tighter truncate">

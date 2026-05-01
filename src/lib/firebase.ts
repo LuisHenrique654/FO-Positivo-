@@ -62,8 +62,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  // In production we might show a toast, but we log JSON for AI Studio diagnostic
-  return errInfo;
+  throw new Error(JSON.stringify(errInfo));
 }
 
 export async function testConnection() {
