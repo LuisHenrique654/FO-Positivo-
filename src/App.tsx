@@ -138,8 +138,15 @@ export default function App() {
   // --- Actions ---
 
   const addStudent = async () => {
-    if (!newStudentName.trim() || !user) return;
-    const studentData = {
+    if (!newStudentName.trim() || !user) {
+      if (!user) showToast('É necessário estar autenticado para cadastrar.', 'negative');
+      return;
+    }
+    
+    // Create reference first to get the ID
+    const studentRef = doc(collection(db, 'students'));
+    const studentData: Student = {
+      id: studentRef.id,
       name: newStudentName.trim(),
       posScore: 0,
       negScore: 0,
@@ -147,11 +154,12 @@ export default function App() {
     };
     
     try {
-      await addDoc(collection(db, 'students'), studentData);
+      await setDoc(studentRef, studentData);
       setNewStudentName('');
       showToast(`Aluno ${studentData.name} cadastrado no sistema.`, 'info');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'students');
+      showToast('Falha ao cadastrar: Verifique suas permissões.', 'negative');
     }
   };
 
@@ -203,15 +211,19 @@ export default function App() {
         type
       );
 
-      await addDoc(collection(db, 'history'), {
+      // Create history entry matching schema: { id, studentId, studentName, type, delta, timestamp }
+      const logRef = doc(collection(db, 'history'));
+      await setDoc(logRef, {
+        id: logRef.id,
         studentId: id,
         studentName: student.name,
-        amount,
+        delta: amount,
         type,
         timestamp: Date.now(),
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `students/${id}`);
+      showToast('Falha na operação: Permissão negada.', 'negative');
     }
   };
 
